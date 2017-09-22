@@ -3,21 +3,6 @@ import copy
 import networkx as nx
 
 
-# -----------------------------------------------------------------------------
-# -------------------------- TODOs
-# -----------------------------------------------------------------------------
-#
-# Generalize graph class to SEM class:
-#
-# * should be able to attach distributions/equations to vertices
-# * should vertices become classes themselves?
-# * make sure functions are compatible with graph structure and stay synced?
-# * query whether vertices have functions attached?
-# * `add_vertex_function` (attach the structural equation to vertex)
-# * if all vertices have functions/distributions can call `sample`
-# * pass in sample and vertices and only regenerate specified vertices
-
-
 class Graph:
     """A light weight, self made graph representation."""
 
