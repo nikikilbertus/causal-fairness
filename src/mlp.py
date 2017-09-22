@@ -6,6 +6,7 @@ import collections
 
 class MLP(nn.Module):
     """A simple fully connected feed forward network."""
+
     def __init__(self, sizes, final=None):
         """
         Initialize the network.
