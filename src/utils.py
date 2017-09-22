@@ -1,13 +1,17 @@
 import torch
+from torch.autograd import Variable
 from matplotlib import pyplot as plt
 
 
-def combine_variables(variables, sample):
+def combine_variables(variables, sample, as_var=False):
     """Stack variables from sample along new axis."""
     data = torch.stack([sample[i] for i in variables], dim=1).squeeze()
     if len(data.size()) == 1:
         data.unsqueeze_(1)
-    return data
+    if as_var:
+        return Variable(data)
+    else:
+        return data
 
 
 def plot_samples(graph, samples):
