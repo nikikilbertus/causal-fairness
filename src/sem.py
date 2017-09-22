@@ -1,8 +1,9 @@
 import copy
-from inspect import signature
+import torch
 
 from graph import Graph
 import utils
+from mlp import train, MLP
 
 
 class SEM(Graph):
@@ -12,59 +13,70 @@ class SEM(Graph):
         """Initialize a structural equation model."""
         super().__init__(graph)
         self.equations = {}
-
-    def _check_signature(self, vertex, equation):
-        """Check that the number of arguments matches the number of parents."""
-        assert vertex in self.vertices(), "{} non-existent".format(vertex)
-
-        n_args = len(signature(equation))
-        if vertex in self.roots():
-            assert n_args == 0, \
-                "{} arguments for root {}".format(n_args, vertex)
-        else:
-            n_parents = len(self.parents(vertex))
-            assert n_parents == n_args, \
-                "{} arguments for {} parents of {}".format(n_args, )
+        self.learned = {}
 
     def _can_sample(self):
         """Check whether graph and equations are consistent."""
         vertices = set(self.vertices())
-        eqs = (self.equations.keys())
+        eqs = set(self.equations.keys())
         assert vertices == eqs, \
             "Vertices: {}, equations for: {}".format(vertices, eqs)
 
-        for v in vertices:
-            self._check_signature(v, self.equations[v])
-
     def attach_equation(self, vertex, equation):
         """Attach an equation or distribution to a vertex."""
-        self._check_signature(vertex, equation)
+        assert vertex in self.vertices(), "{} non-existent".format(vertex)
         print("Attaching equation to vertex {}...".format(vertex), end=' ')
         self.equations[vertex] = equation
         print("DONE")
 
-    def sample(self):
+    def sample(self, n_samples):
+        """If possible, sample from the structural equation model."""
+        self._can_sample()
         sample = {}
         for v in self.topological_sort():
             print("Sample vertex {}...".format(v), end=' ')
             if v in self.roots():
-                sample[v] = self.equations[v]()
+                sample[v] = self.equations[v](n_samples)
             else:
-                args = tuple([sample[p] for p in self.parents(v)])
-                sample[v] = self.equations[v](*args)
+                sample[v] = self.equations[v](sample)
             print("DONE")
         return sample
 
-    def learn_from_sample(self, sample, learned):
-        from torch.autograd import Variable
+    def learn_from_sample(self, sample=None, hidden_sizes=(), binarize=None):
+        """Learn the structural equations from data."""
+        if sample is None:
+            n_samples = 8192
+            print("There was no sample provided to learn from.")
+            print("Generate sample with {} examples.".format(n_samples))
+            sample = self.sample(n_samples)
+
+        for v in self.non_roots():
+            parents = self.parents(v)
+            print("Training {} -> {}...".format(parents, v), end=' ')
+            data = utils.combine_variables(parents, sample)
+            if v in binarize:
+                final = torch.nn.Sigmoid()
+            else:
+                final = None
+            net = MLP([data.size(-1), *hidden_sizes, 1], final=final)
+            self.learned[v] = train(net, data, sample[v])
+            print("DONE")
+
+            # self.attach_equation(v, lambda d: learned[v]().data)
+        return self.learned
+
+    def predict_from_sample(self, sample):
+        """Predict non-root variables in a sample for updated sample."""
+        assert self.learned, "Must learn all SEMs before prediction."
+
         new_sample = copy.deepcopy(sample)
-        need_update = [v for v in self.topological_sort()
-                       if v not in self.roots()]
-        print("Updating the nodes {}.".format(need_update))
-        for update in need_update:
-            print("Updating node {}...".format(update), end=' ')
-            argument = Variable(utils.combine_variables(self.parents(update),
-                                                        new_sample))
-            new_sample[update] = learned[update](argument).data
+        update = [v for v in self.topological_sort() if v not in self.roots()]
+
+        print("Updating the vertices {}...".format(update), end=' ')
+        for v in update:
+            args = utils.combine_variables(self.parents(v),
+                                           new_sample,
+                                           as_var=True)
+            new_sample[v] = self.learned[v](args).data
         print("DONE")
         return new_sample
