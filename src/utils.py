@@ -1,6 +1,8 @@
 import torch
 from torch.autograd import Variable
 from matplotlib import pyplot as plt
+from scipy.stats import linregress
+import numpy as np
 
 
 def combine_variables(variables, sample, as_var=False):
@@ -14,7 +16,7 @@ def combine_variables(variables, sample, as_var=False):
         return data
 
 
-def plot_samples(graph, samples):
+def plot_samples(graph, samples, **kwargs):
     """Plot all relevant dependencies in a graph from a/multiple sample(s)."""
     # If we did not already receive a list of samples, make one element list
     if not isinstance(samples, list):
@@ -32,8 +34,65 @@ def plot_samples(graph, samples):
         for j, x_var in enumerate(graph.parents(y_var)):
             for sample in samples:
                 axs[i, j].plot(sample[x_var].numpy(),
-                               sample[y_var].numpy(), '.')
+                               sample[y_var].numpy(), '.', **kwargs)
                 axs[i, j].set_xlabel(x_var)
                 axs[i, j].set_ylabel(y_var)
     plt.tight_layout()
     plt.show()
+
+
+def correlations(sample, sem=None, sources=None, targets=None):
+    """Compute the correlations of all specified dependencies."""
+    if not sources:
+        sources = sem.vertices()
+    if not targets:
+        targets = sem.vertices()
+
+    values = ['slope', 'rvalue', 'pvalue', 'intercept', 'stderr']
+    corr = {}
+    for v in values:
+        corr[v] = np.zeros((len(targets), len(sources)))
+
+    for i, t in enumerate(targets):
+        for j, s in enumerate(sources):
+            sdata = sample[s].numpy().squeeze()
+            tdata = sample[t].numpy().squeeze()
+            model = linregress(sdata, tdata)
+            for v in values:
+                corr[v][i, j] = getattr(model, v)
+    return corr
+
+
+def print_correlations(sample, sem=None, sources=None, targets=None):
+    """Print the correlations of all specified dependencies."""
+    if not sources:
+        sources = sem.vertices()
+    if not targets:
+        targets = sem.vertices()
+
+    corr = correlations(sample, sem=sem, sources=sources, targets=targets)
+
+    for i, t in enumerate(targets):
+        for j, s in enumerate(sources):
+            print("\n\nRelation between {} and {}:".format(s, t))
+            [print("{}: {:.4f}, ".format(name, value[i, j]), end='')
+             for name, value in corr.items()]
+
+
+def plot_correlations(sample, sem=None, sources=None, targets=None):
+    """Plot the correlations of all specified dependencies."""
+    if not sources:
+        sources = sem.vertices()
+    if not targets:
+        targets = sem.vertices()
+
+    corr = correlations(sample, sem=sem, sources=sources, targets=targets)
+
+    for label, data in corr.items():
+        plt.figure(figsize=(5, 5))
+        plt.imshow(data)
+        plt.title(label)
+        plt.xticks(range(len(sources)), sources)
+        plt.yticks(range(len(targets)), targets)
+        plt.colorbar()
+        plt.show()
