@@ -10,7 +10,15 @@ class SEM(Graph):
     """A representation of a structural eqaution model."""
 
     def __init__(self, graph):
-        """Initialize a structural equation model."""
+        """
+        Initialize a structural equation model.
+
+        Arguments:
+
+            graph: A dictionary, where the vertices of the graph are the keys
+            and each value is a lists of parents(!) of the key vertex. Setting
+            the value to `None` means that the vertex is a root of the graph.
+        """
         super().__init__(graph)
         self.equations = {}
         self.learned = {}
@@ -42,7 +50,8 @@ class SEM(Graph):
             print("DONE")
         return sample
 
-    def learn_from_sample(self, sample=None, hidden_sizes=(), binarize=None):
+    def learn_from_sample(self, sample=None, hidden_sizes=(), binarize=[],
+                          **kwargs):
         """Learn the structural equations from data."""
         if sample is None:
             n_samples = 8192
@@ -59,24 +68,48 @@ class SEM(Graph):
             else:
                 final = None
             net = MLP([data.size(-1), *hidden_sizes, 1], final=final)
-            self.learned[v] = train(net, data, sample[v])
+            self.learned[v] = train(net, data, sample[v], **kwargs)
             print("DONE")
 
-            # self.attach_equation(v, lambda d: learned[v]().data)
-        return self.learned
-
-    def predict_from_sample(self, sample):
+    def predict_from_sample(self, sample, update=None, mutate=False,
+                            replace=[]):
         """Predict non-root variables in a sample for updated sample."""
         assert self.learned, "Must learn all SEMs before prediction."
 
-        new_sample = copy.deepcopy(sample)
-        update = [v for v in self.topological_sort() if v not in self.roots()]
+        if mutate:
+            new_sample = sample
+        else:
+            new_sample = copy.deepcopy(sample)
+
+        if update is None:
+            update = [v for v in self.topological_sort()
+                      if v not in self.roots()]
 
         print("Updating the vertices {}...".format(update), end=' ')
         for v in update:
             args = utils.combine_variables(self.parents(v),
                                            new_sample,
                                            as_var=True)
-            new_sample[v] = self.learned[v](args).data
+            if v in replace:
+                new_sample[v] = replace[v](args).data
+            else:
+                new_sample[v] = self.learned[v](args).data
         print("DONE")
-        return new_sample
+        if not mutate:
+            return new_sample
+
+    def print_learned_parameters(self, show=None, weights=True, biases=True):
+        """Print the learned parameters."""
+        if show is None:
+            show = self.non_roots()
+
+        for target, model in self.learned.items():
+            if target in show:
+                print("Parameters for ", target)
+                for name, param in model.named_parameters():
+                    if weights and 'weight' in name:
+                        print("weights:")
+                        print(param.data.numpy())
+                    if biases and 'bias' in name:
+                        print("biases:")
+                        print(param.data.numpy())
