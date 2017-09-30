@@ -168,6 +168,12 @@ class Graph:
     def draw(self):
         """Draw the graph."""
         from nxpd import draw
+        try:
+            get_ipython
+            from nxpd import nxpdParams
+            nxpdParams['show'] = 'ipynb'
+        except NameError:
+            pass
         G = self._convert_to_nx()
-        G.graph['dpi'] = 150
-        draw(G)
+        G.graph['dpi'] = 80
+        return draw(G)
