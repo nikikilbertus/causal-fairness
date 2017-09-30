@@ -11,7 +11,7 @@ class MLP(nn.Module):
         """
         Initialize the network.
 
-        A variable size network with only fully connected layers and ELU
+        A variable size network with only fully connected layers and SELU
         activations after all but the last layer.
 
         Arguments:
@@ -48,10 +48,10 @@ class MLP(nn.Module):
             self.layers.append(nn.ModuleList([nn.Linear(1, sizes[1])
                                               for _ in range(sizes[0])]))
 
-        # Add the remaining layers with elu activations
+        # Add the remaining layers with selu activations
         for i in range(len(sizes) - 1)[1:]:
             if i != (len(sizes) - 1):
-                self.layers.append(nn.ELU())
+                self.layers.append(nn.SELU())
             self.layers.append(nn.Linear(sizes[i], sizes[i + 1]))
 
         if final is not None:
