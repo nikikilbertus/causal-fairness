@@ -58,6 +58,9 @@ class SEM(Graph):
             print("There was no sample provided to learn from.")
             print("Generate sample with {} examples.".format(n_samples))
             sample = self.sample(n_samples)
+            learned_sample = True
+        else:
+            learned_sample = False
 
         for v in self.non_roots():
             parents = self.parents(v)
@@ -70,6 +73,9 @@ class SEM(Graph):
             net = MLP([data.size(-1), *hidden_sizes, 1], final=final)
             self.learned[v] = train(net, data, sample[v], **kwargs)
             print("DONE")
+
+        if learned_sample:
+            return sample
 
     def predict_from_sample(self, sample, update=None, mutate=False,
                             replace=[]):
