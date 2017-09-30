@@ -16,7 +16,7 @@ def combine_variables(variables, sample, as_var=False):
         return data
 
 
-def plot_samples(graph, samples, **kwargs):
+def plot_samples(graph, samples, legend=None, **kwargs):
     """Plot all relevant dependencies in a graph from a/multiple sample(s)."""
     # If we did not already receive a list of samples, make one element list
     if not isinstance(samples, list):
@@ -37,6 +37,8 @@ def plot_samples(graph, samples, **kwargs):
                                sample[y_var].numpy(), '.', **kwargs)
                 axs[i, j].set_xlabel(x_var)
                 axs[i, j].set_ylabel(y_var)
+                if legend:
+                    axs[i, j].legend(legend)
     plt.tight_layout()
     plt.show()
 
@@ -96,3 +98,16 @@ def plot_correlations(sample, sem=None, sources=None, targets=None):
         plt.yticks(range(len(targets)), targets)
         plt.colorbar()
         plt.show()
+
+
+def evaluate_on_new_sample(sem, target, corrected, n_sample=8192, plot=True):
+    """Evaluate the learned and corrected versions on a new sample."""
+    base = sem.sample(8192)
+    orig = sem.predict_from_sample(base)
+    fair = sem.predict_from_sample(base, replace={target: corrected})
+    fair_target = target + 'fair'
+    orig[fair_target] = fair[target]
+    if plot:
+        plot_samples(sem, [base, orig, fair],
+                     legend=['base', 'learned', 'fair'], alpha=0.3)
+    return base, orig, fair
