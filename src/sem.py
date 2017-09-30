@@ -1,9 +1,8 @@
-import copy
 import torch
 
 from graph import Graph
+from mlp import MLP, train
 import utils
-from mlp import train, MLP
 
 
 class SEM(Graph):
@@ -85,6 +84,7 @@ class SEM(Graph):
         if mutate:
             new_sample = sample
         else:
+            import copy
             new_sample = copy.deepcopy(sample)
 
         if update is None:
