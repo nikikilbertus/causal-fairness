@@ -77,12 +77,14 @@ class Interventions:
 
     def _set_n_interventions(self):
         """Set the total number of interventions, i.e. training sets."""
-        self.n_interventions = 0
+        self.n_interventions = 1
         for proxy, funcs in self.interventions.items():
+            n_proxy = 0
             for params in funcs.values():
                 if not isinstance(params, list):
                     params = [params]
-                self.n_interventions += len(params)
+                n_proxy += len(params)
+            self.n_interventions *= n_proxy
 
     def _create_intervened_samples(self):
         """For each intervention get a sample with the right proxy values."""
@@ -125,8 +127,8 @@ class Interventions:
             param.requires_grad = False
 
         # Only give gradients to the part that is retrained for correction
-        # FIXME: the layer indices are hard coded. I have to find those out.
-        # FIXME: Finetune only weights or also biases?
+        # TODO: the layer indices are hard coded. I have to find those out.
+        # TODO: Finetune only weights or also biases?
 
         # Fine tune weights and biases
         for param in corrected.layers[0][0].parameters():
