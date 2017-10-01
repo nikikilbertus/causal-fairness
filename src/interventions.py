@@ -17,7 +17,9 @@ class Interventions:
         'rand': (lambda self, start, end:
                  torch.rand(self.n_samples, 1) * (start - end) + end),
         'range': (lambda self, a, b:
-                  torch.linspace(a, b, steps=self.n_samples).unsqueeze_(1))
+                  torch.linspace(a, b, steps=self.n_samples).unsqueeze_(1)),
+        'bernoulli': (lambda self, p:
+                      torch.bernoulli(torch.ones(self.n_samples, 1) * p)),
     }
 
     def __init__(self, sem, base_sample, intervention_spec, target='Y'):
@@ -117,7 +119,7 @@ class Interventions:
         self._create_intervened_samples()
         self._update()
 
-    def _copy_and_freeze(self, model):
+    def _copy_and_freeze(self, model, biases):
         """Copy a learned model and partially freeze parameters."""
         # Copy the original model
         corrected = copy.deepcopy(model)
@@ -127,17 +129,16 @@ class Interventions:
             param.requires_grad = False
 
         # Only give gradients to the part that is retrained for correction
-        # TODO: the layer indices are hard coded. I have to find those out.
-        # TODO: Finetune only weights or also biases?
-
-        # Fine tune weights and biases
-        for param in corrected.layers[0][0].parameters():
-            param.requires_grad = True
-        # Fine tune only weights
-        # corrected.layers[0][0].weight.requires_grad = True
+        for i, v in enumerate(self.intervened_graph.parents(self.target)):
+            if v in self.proxies:
+                if biases:
+                    for param in corrected.layers[0][i].parameters():
+                        param.requires_grad = True
+                else:
+                    corrected.layers[0][i].weight.requires_grad = True
         return corrected
 
-    def train_corrected(self, batchsize=32, epochs=50):
+    def train_corrected(self, batchsize=32, epochs=50, biases=False):
         # Some basic input checks
         target = self.target
         proxies = self.proxies
@@ -156,7 +157,7 @@ class Interventions:
 
         print("Freeze everything except first weights from {} to {}..."
               .format(proxies, target), end=' ')
-        corrected = self._copy_and_freeze(self.sem.learned[target])
+        corrected = self._copy_and_freeze(self.sem.learned[target], biases)
         print("DONE")
 
         print("Set up the optimizer...", end=' ')
