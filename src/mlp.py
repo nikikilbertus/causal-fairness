@@ -7,7 +7,7 @@ import collections
 class MLP(nn.Module):
     """A simple fully connected feed forward network."""
 
-    def __init__(self, sizes, final=None):
+    def __init__(self, sizes, final=None, batchnorm=False, dropout=0.2):
         """
         Initialize the network.
 
@@ -51,7 +51,14 @@ class MLP(nn.Module):
         # Add the remaining layers with selu activations
         for i in range(len(sizes) - 1)[1:]:
             if i != (len(sizes) - 1):
+                if batchnorm:
+                    self.layers.append(nn.BatchNorm1d(sizes[i]))
                 self.layers.append(nn.SELU())
+                if dropout is not None:
+                    if sizes[i] < 32:
+                        print("Warning: Dropout {} on only {} parameters..."
+                              .format(dropout, sizes[i]))
+                    self.layers.append(nn.Dropout(p=dropout))
             self.layers.append(nn.Linear(sizes[i], sizes[i + 1]))
 
         if final is not None:
@@ -71,7 +78,8 @@ class MLP(nn.Module):
             return nn.Sequential(*self.layers)(x)
 
 
-def train(net, x, y, loss_func=nn.MSELoss(), epochs=50, batchsize=32):
+def train(net, x, y, loss_func=nn.MSELoss(), epochs=50, batchsize=32,
+          **kwargs):
     """
     Train a network on data.
 
@@ -87,7 +95,7 @@ def train(net, x, y, loss_func=nn.MSELoss(), epochs=50, batchsize=32):
 
         n_epochs:  Number of training epochs.
     """
-    opt = torch.optim.Adam(net.parameters())
+    opt = torch.optim.Adam(net.parameters(), **kwargs)
     n_samples = x.size(0)
     for epoch in range(epochs):
         # Shuffle training data
