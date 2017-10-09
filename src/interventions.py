@@ -138,7 +138,7 @@ class Interventions:
                     corrected.layers[0][i].weight.requires_grad = True
         return corrected
 
-    def train_corrected(self, batchsize=32, epochs=50, biases=False):
+    def train_corrected(self, batchsize=32, epochs=50, biases=False, **kwargs):
         # Some basic input checks
         target = self.target
         proxies = self.proxies
@@ -162,7 +162,8 @@ class Interventions:
 
         print("Set up the optimizer...", end=' ')
         opt = torch.optim.Adam(filter(lambda p:
-                                      p.requires_grad, corrected.parameters()))
+                                      p.requires_grad, corrected.parameters()),
+                               **kwargs)
         print("DONE")
 
         print("Partially retrain the target model for correction...", end=' ')
