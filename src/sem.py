@@ -29,6 +29,24 @@ class SEM(Graph):
         assert vertices == eqs, \
             "Vertices: {}, equations for: {}".format(vertices, eqs)
 
+    def _get_hidden(self, hidden_sizes, vertex):
+        """
+        Extract the sizes of hidden layers for a vertex.
+
+        For flexibility, there is a bit of logic and fallbacks to default
+        values to extract the sizes of the hidden layers.
+        """
+        if isinstance(hidden_sizes, dict):
+            if vertex in hidden_sizes:
+                hidden = hidden_sizes[vertex]
+            elif None in hidden_sizes:
+                hidden = hidden_sizes[None]
+            else:
+                hidden = ()
+        else:
+            hidden = hidden_sizes
+        return hidden
+
     def attach_equation(self, vertex, equation):
         """Attach an equation or distribution to a vertex."""
         assert vertex in self.vertices(), "{} non-existent".format(vertex)
@@ -52,8 +70,9 @@ class SEM(Graph):
     def learn_from_sample(self, sample=None, hidden_sizes=(), binarize=[],
                           **kwargs):
         """Learn the structural equations from data."""
-        if sample is None:
-            n_samples = 8192
+        # Was a sample provided or do we need to generate one
+        if sample is None or isinstance(sample, int):
+            n_samples = 8192 if sample is None else sample
             print("There was no sample provided to learn from.")
             print("Generate sample with {} examples.".format(n_samples))
             sample = self.sample(n_samples)
@@ -61,6 +80,7 @@ class SEM(Graph):
         else:
             learned_sample = False
 
+        # Build and train network for all non-roots
         for v in self.non_roots():
             parents = self.parents(v)
             print("Training {} -> {}...".format(parents, v), end=' ')
@@ -69,7 +89,8 @@ class SEM(Graph):
                 final = torch.nn.Sigmoid()
             else:
                 final = None
-            net = MLP([data.size(-1), *hidden_sizes, 1], final=final)
+            hidden = self._get_hidden(hidden_sizes, v)
+            net = MLP([data.size(-1), *hidden, 1], final=final)
             self.learned[v] = train(net, data, sample[v], **kwargs)
             print("DONE")
 
@@ -77,7 +98,7 @@ class SEM(Graph):
             return sample
 
     def predict_from_sample(self, sample, update=None, mutate=False,
-                            replace=[]):
+                            replace={}):
         """Predict non-root variables in a sample for updated sample."""
         assert self.learned, "Must learn all SEMs before prediction."
 
