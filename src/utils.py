@@ -102,7 +102,7 @@ def plot_correlations(sample, sem=None, sources=None, targets=None):
 
 def evaluate_on_new_sample(sem, target, corrected, n_sample=8192, plot=True):
     """Evaluate the learned and corrected versions on a new sample."""
-    base = sem.sample(8192)
+    base = sem.sample(n_sample)
     orig = sem.predict_from_sample(base)
     fair = sem.predict_from_sample(base, replace={target: corrected})
     fair_target = target + 'fair'
