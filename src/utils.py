@@ -7,9 +7,7 @@ import numpy as np
 
 def combine_variables(variables, sample, as_var=False):
     """Stack variables from sample along new axis."""
-    data = torch.stack([sample[i] for i in variables], dim=1).squeeze()
-    if len(data.size()) == 1:
-        data.unsqueeze_(1)
+    data = torch.cat([sample[i] for i in variables], dim=1)
     if as_var:
         return Variable(data)
     else:
