@@ -90,7 +90,8 @@ class SEM(Graph):
             else:
                 final = None
             hidden = self._get_hidden(hidden_sizes, v)
-            net = MLP([data.size(-1), *hidden, 1], final=final)
+            net = MLP([data.size(-1), *hidden, sample[v].size(-1)],
+                      final=final)
             self.learned[v] = train(net, data, sample[v], **kwargs)
             print("DONE")
 
