@@ -72,6 +72,9 @@ class Interventions:
         assert self.target in self.sem.leafs(), \
             "Can't correct for non-leaf {}".format(self.target)
 
+        assert self.base_sample[self.target].size(-1) == 1, \
+            "Can't correct for multidimensional target {}".format(self.target)
+
         for proxy in self.proxies:
             assert self.target in self.sem.descendents(proxy), \
                 ("Can't correct for non-descendent {} of {}."
@@ -176,7 +179,7 @@ class Interventions:
                 # Reset gradients
                 opt.zero_grad()
                 # Forward pass
-                Ys = Variable(torch.zeros(batchsize, self.n_interventions))
+                Ys = Variable(torch.zeros(i2 - i1, self.n_interventions))
                 for i, sample in enumerate(self.training_samples):
                     data = combine_variables(parents, sample)[p]
                     args = Variable(data[i1:i2, :])
