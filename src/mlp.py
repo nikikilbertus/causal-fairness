@@ -16,14 +16,19 @@ class MLP(nn.Module):
 
         Arguments:
 
-        sizes: A list of the numbers of neurons in the layers.
-               len(sizes)-1 is the number of layers.
-               First and last entries are input and output dimension.
+            sizes: A list of the numbers of neurons in the layers.
+                   len(sizes)-1 is the number of layers.
+                   First and last entries are input and output dimension.
 
-        final: What to use as a final layer, e.g. torch.nn.Sigmoid()
-               None (default) means no final layer.
+            final: What to use as a final layer, e.g. torch.nn.Sigmoid()
+                   None (default) means no final layer.
 
-        Example:
+            batchnorm: Whether to use batchnorm (default False)
+
+            dropout: Dropout fraction (default 0.2)
+
+        Examples:
+
             A network with 2-dimensional input, one hidden layer with 128
             neurons and 1-dimensional output for regression:
 
@@ -78,22 +83,30 @@ class MLP(nn.Module):
             return nn.Sequential(*self.layers)(x)
 
 
-def train(net, x, y, loss_func=nn.MSELoss(), epochs=50, batchsize=32,
+def train(net, x, y, loss_func=nn.MSELoss(), epochs=50, batchsize=64,
           **kwargs):
     """
     Train a network on data.
 
-    Arguments:
+        Arguments:
 
-        net:       A network module
+            net:       A network module
 
-        x:         Training input data
+            x:         Training input data
 
-        y:         Training labels
+            y:         Training labels
 
-        loos_func: Loss function (default nn.MSELoss())
+            loss_func: Loss function (default nn.MSELoss())
 
-        n_epochs:  Number of training epochs.
+            n_epochs:  Number of training epochs (default 50)
+
+            batchsize: Minibatch size (default 64)
+
+            **kwargs:  Further named parameters
+
+        Returns:
+
+            net: The trained network
     """
     opt = torch.optim.Adam(net.parameters(), **kwargs)
     n_samples = x.size(0)
