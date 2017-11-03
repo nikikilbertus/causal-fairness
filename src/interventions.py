@@ -1,6 +1,7 @@
 import torch
 from torch.autograd import Variable
 import copy
+from tqdm import tqdm
 
 from utils import combine_variables
 
@@ -22,7 +23,8 @@ class Interventions:
                       torch.bernoulli(torch.ones(self.n_samples, 1) * p)),
     }
 
-    def __init__(self, sem, base_sample, intervention_spec, target='Y'):
+    def __init__(self, sem, base_sample, intervention_spec, target='Y',
+                 verbose=0):
         """
         Initialize with a base sample and intervention specification.
 
@@ -76,8 +78,8 @@ class Interventions:
             "Can't correct for multidimensional target {}".format(self.target)
 
         for proxy in self.proxies:
-            assert self.target in self.sem.descendents(proxy), \
-                ("Can't correct for non-descendent {} of {}."
+            assert self.target in self.sem.descendants(proxy), \
+                ("Can't correct for non-descendant {} of {}."
                  .format(self.target, proxy))
 
     def _set_n_interventions(self):
@@ -94,8 +96,13 @@ class Interventions:
     def _create_intervened_samples(self):
         """For each intervention get a sample with the right proxy values."""
         self.training_samples = []
-        print("Initialize training samples with intervened values...", end=' ')
+        if self.verbose > 0:
+            print("Initialize training samples with intervened values...",
+                  end=' ')
         for proxy, functions in self.interventions.items():
+            if self.verbose > 1:
+                print("Set proxy {} with functions {}"
+                      .format(proxy, functions))
             for func, parameters in functions.items():
                 if not isinstance(parameters, list):
                     parameters = [parameters]
@@ -110,9 +117,9 @@ class Interventions:
         exclude = self.intervened_graph.roots() + [self.target]
         update = [v for v in self.intervened_graph.topological_sort()
                   if v not in exclude]
-
-        print("Predict non-roots {} in all intervened samples."
-              .format(update))
+        if self.verbose > 0:
+            print("Predict non-roots {} in all intervened samples."
+                  .format(update))
         for sample in self.training_samples:
             self.sem.predict_from_sample(sample, update=update, mutate=True)
         print("All intervened samples updated.")
@@ -122,23 +129,56 @@ class Interventions:
         self._create_intervened_samples()
         self._update()
 
+    def _get_parameter_indices(self, vertex):
+        """Find the indices of the vertex in the input tensor for target."""
+        if self.verbose > 1:
+            print("Find parameters indices of {} in all inputs {}"
+                  .format(vertex, self.intervened_graph.parents(self.target)))
+        parents = self.intervened_graph.parents(self.target)
+        start = 0
+        for p in parents:
+            if p == vertex:
+                end = start + self.base_sample[p].size(-1)
+                break
+            start += self.base_sample[p].size(-1)
+        if self.verbose > 1:
+            print("Indices from {} to {}".format(start, end))
+        return start, end
+
     def _copy_and_freeze(self, model, biases):
         """Copy a learned model and partially freeze parameters."""
         # Copy the original model
         corrected = copy.deepcopy(model)
 
+        if self.verbose > 1:
+            print("Freeze all parameters...", end=' ')
         # First freeze all parameters
         for param in corrected.parameters():
             param.requires_grad = False
+        if self.verbose > 1:
+            print("DONE")
+
+        if self.verbose > 1:
+            if biases:
+                print("Retrain weights and biases for {} to {}"
+                      .format(self.proxies, self.target))
+            else:
+                print("Retrain only weights for {} to {}"
+                      .format(self.proxies, self.target))
 
         # Only give gradients to the part that is retrained for correction
-        for i, v in enumerate(self.intervened_graph.parents(self.target)):
+        for v in self.intervened_graph.parents(self.target):
             if v in self.proxies:
-                if biases:
-                    for param in corrected.layers[0][i].parameters():
-                        param.requires_grad = True
-                else:
-                    corrected.layers[0][i].weight.requires_grad = True
+                if self.verbose > 2:
+                    print("Partially retrain parameters of"
+                          .format(corrected.layers[0]))
+                start, end = self._get_parameter_indices(v)
+                for i in range(start, end):
+                    if biases:
+                        for param in corrected.layers[0][i].parameters():
+                            param.requires_grad = True
+                    else:
+                        corrected.layers[0][i].weight.requires_grad = True
         return corrected
 
     def train_corrected(self, batchsize=32, epochs=50, biases=False, **kwargs):
@@ -171,9 +211,11 @@ class Interventions:
 
         print("Partially retrain the target model for correction...", end=' ')
         n_samples = self.n_samples
-        for epoch in range(epochs):
+        for epoch in tqdm(range(epochs), desc='epochs'):
             p = torch.randperm(n_samples).long()
             # Go through batches
+            # for i1 in tqdm(range(0, n_samples, batchsize), desc='minibatches',
+            #                leave=False):
             for i1 in range(0, n_samples, batchsize):
                 i2 = min(i1 + batchsize, n_samples)
                 # Reset gradients
@@ -185,7 +227,7 @@ class Interventions:
                     args = Variable(data[i1:i2, :])
                     Ys[:, i] = corrected(args).squeeze()
                 # Compute loss
-                loss = torch.sum(torch.var(Ys, dim=0))
+                loss = torch.sum(torch.var(Ys, dim=1))
                 # Backward pass
                 loss.backward()
                 # Parameter update
