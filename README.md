@@ -1,8 +1,5 @@
-# Proxy Equalizer
+# Causal Fairness
 
-This is a practical framework motivated by the paper "Avoiding discrimination
-through causal reasoning". In particular we focus on the notion of removing
-_proxy discrimination_.
+This is an effort to implement some ideas from [Kilbertus et al.](https://arxiv.org/abs/1706.02744) and [Kusner et al.](https://arxiv.org/abs/1703.06856).
 
-Here we explore ways how proxy discrimination could potentially be removed in
-practice, given a causal graph and observational data from that graph.
+:warning: This is a constantly changing playground for work in progress and not functioning yet. :warning:
