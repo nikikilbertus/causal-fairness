@@ -80,6 +80,8 @@ class SEM(Graph):
         else:
             learned_sample = False
 
+        dropout = kwargs.pop('dropout', 0.0)
+
         # Build and train network for all non-roots
         for v in self.non_roots():
             parents = self.parents(v)
@@ -91,7 +93,7 @@ class SEM(Graph):
                 final = None
             hidden = self._get_hidden(hidden_sizes, v)
             net = MLP([data.size(-1), *hidden, sample[v].size(-1)],
-                      final=final)
+                      final=final, dropout=dropout)
             self.learned[v] = train(net, data, sample[v], **kwargs)
             print("DONE")
 
