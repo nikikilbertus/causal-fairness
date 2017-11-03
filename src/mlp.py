@@ -2,12 +2,13 @@ import torch
 import torch.nn as nn
 from torch.autograd import Variable
 import collections
+from tqdm import tqdm
 
 
 class MLP(nn.Module):
     """A simple fully connected feed forward network."""
 
-    def __init__(self, sizes, final=None, batchnorm=False, dropout=0.2):
+    def __init__(self, sizes, final=None, batchnorm=False, dropout=0.0):
         """
         Initialize the network.
 
@@ -110,13 +111,14 @@ def train(net, x, y, loss_func=nn.MSELoss(), epochs=50, batchsize=64,
     """
     opt = torch.optim.Adam(net.parameters(), **kwargs)
     n_samples = x.size(0)
-    for epoch in range(epochs):
+    for epoch in tqdm(range(epochs), desc='epochs'):
         # Shuffle training data
         p = torch.randperm(n_samples).long()
         xp = x[p]
         yp = y[p]
 
-        for i1 in range(0, n_samples, batchsize):
+        for i1 in tqdm(range(0, n_samples, batchsize), desc='minibatches',
+                       leave=False):
             # Extract a batch
             i2 = min(i1 + batchsize, n_samples)
             xi, yi = xp[i1:i2], yp[i1:i2]
