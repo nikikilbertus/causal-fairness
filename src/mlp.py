@@ -6,7 +6,7 @@ from tqdm import tqdm
 
 
 class MLP(nn.Module):
-    """A simple fully connected feed forward network."""
+    """A multi layered perceptron (fully connected net)."""
 
     def __init__(self, sizes, final=None, batchnorm=False, dropout=0.0):
         """
@@ -17,16 +17,18 @@ class MLP(nn.Module):
 
         Arguments:
 
-            sizes: A list of the numbers of neurons in the layers.
-                   len(sizes)-1 is the number of layers.
+            sizes: A list or tuple of the numbers of neurons in each layer.
+                   `len(sizes)-1` is the number of layers.
                    First and last entries are input and output dimension.
 
-            final: What to use as a final layer, e.g. torch.nn.Sigmoid()
-                   None (default) means no final layer.
+            final: What to use as a final layer, e.g. `torch.nn.Sigmoid()` (for
+                   classification).
+                   None (default) means no final activation layer (for
+                   regression).
 
-            batchnorm: Whether to use batchnorm (default False)
+            batchnorm: A boolean, whether to use batchnorm (default False)
 
-            dropout: Dropout fraction (default 0.2)
+            dropout: Dropout fraction (default 0.0 = no dropout)
 
         Examples:
 
@@ -36,9 +38,11 @@ class MLP(nn.Module):
             >>> net = MLP([2, 128, 1])
 
             A network with 10-dimensional input, two hidden layers of 128 and
-            256 neurons and 1-dimensional output for classification:
+            256 neurons and 1-dimensional output for classification with
+            dropout:
 
-            >>> net = MLP([10, 128, 256, 1], final=torch.nn.Sigmoid())
+            >>> net = MLP([10, 128, 256, 1], final=torch.nn.Sigmoid(),
+                          dropout=0.5)
         """
         super(MLP, self).__init__()
 
@@ -87,27 +91,27 @@ class MLP(nn.Module):
 def train(net, x, y, loss_func=nn.MSELoss(), epochs=50, batchsize=64,
           **kwargs):
     """
-    Train a network on data.
+    Train a network on data with Adam.
 
-        Arguments:
+    Arguments:
 
-            net:       A network module
+        net: A network module, e.g. an instance of `MLP`
 
-            x:         Training input data
+        x: A torch tensor containing the training input data
 
-            y:         Training labels
+        y: A torch tensor containing the training labels
 
-            loss_func: Loss function (default nn.MSELoss())
+        loss_func: Loss function (default `nn.MSELoss()`)
 
-            n_epochs:  Number of training epochs (default 50)
+        epochs: Number of training epochs (default 50)
 
-            batchsize: Minibatch size (default 64)
+        batchsize: Minibatch size (default 64)
 
-            **kwargs:  Further named parameters
+        **kwargs: Further named parameters passed on to `torch.optim.Adam`
 
-        Returns:
+    Returns:
 
-            net: The trained network
+        net: The trained network
     """
     opt = torch.optim.Adam(net.parameters(), **kwargs)
     n_samples = x.size(0)

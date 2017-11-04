@@ -13,8 +13,20 @@ class Graph:
         Arguments:
 
             graph: A dictionary, where the keys are the vertices of the graph
-            and the values are the parents(!) of the key vertex. Setting the
-            value to `None` means that the key vertex is a root of the graph.
+            and the values are lists of parents(!) of the key vertices. Setting
+            the value to `None` means that the key vertex is a root of the
+            graph.
+
+        Examples:
+
+            Initialize a very simple graph with three vertices:
+
+            >>> graph = Graph({'X': None, 'Y': None, 'Z': ['X', 'Y']})
+
+            We can now print a summary of the graph and also draw it:
+
+            >>> graph.summary()
+            >>> graph.draw()
         """
         # If the input is a dict, assume it is already in the correct format
         if isinstance(graph, dict):
@@ -113,9 +125,9 @@ class Graph:
         """
         Find the parents of a vertex.
 
-            Arguments:
+        Arguments:
 
-                vertex: A single vertex of the graph.
+            vertex: A single vertex of the graph.
         """
         return self.graph[vertex]
 
@@ -123,9 +135,9 @@ class Graph:
         """
         Find the children of a vertex.
 
-            Arguments:
+        Arguments:
 
-                vertex: A single vertex of the graph.
+            vertex: A single vertex of the graph.
         """
         children = []
         for node, parents in self.graph.items():
@@ -137,9 +149,9 @@ class Graph:
         """
         Find all descendants of a vertex.
 
-            Arguments:
+        Arguments:
 
-                vertex: A single vertex of the graph.
+            vertex: A single vertex of the graph.
         """
         descendants = []
         # Start with current children and set exit point for recursion
@@ -160,10 +172,9 @@ class Graph:
         """
         Return the intervened graph as a new graph.
 
-            Arguments:
+        Arguments:
 
-                interventions: A single vertex or an iterable collection of
-                vertices.
+            interventions: Single vertex or an iterable collection of vertices.
         """
         intervened_graph = copy.deepcopy(self.graph)
         if isinstance(interventions, collections.Iterable):
@@ -196,7 +207,14 @@ class Graph:
         return G
 
     def topological_sort(self):
-        """Compute a topological sort of the graph through networkx."""
+        """
+        Topologically sort the graph through networkx.
+
+        Returns:
+
+            A list of all vertices of the graph sorted in topological order,
+            see https://en.wikipedia.org/wiki/Topological_sorting
+        """
         G = self._convert_to_nx()
         return list(nx.topological_sort(G))
 
