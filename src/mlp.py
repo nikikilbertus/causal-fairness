@@ -2,7 +2,11 @@ import torch
 import torch.nn as nn
 from torch.autograd import Variable
 import collections
-from tqdm import tqdm
+try:
+    get_ipython
+    from tqdm import tqdm_notebook as tqdm
+except NameError:
+    from tqdm import tqdm
 
 
 class MLP(nn.Module):
