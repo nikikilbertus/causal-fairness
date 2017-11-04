@@ -1,7 +1,11 @@
 import torch
 from torch.autograd import Variable
 import copy
-from tqdm import tqdm
+try:
+    get_ipython
+    from tqdm import tqdm_notebook as tqdm
+except NameError:
+    from tqdm import tqdm
 
 from utils import combine_variables
 
@@ -73,13 +77,14 @@ class Interventions:
 
             >>> interventions = Interventions(sem, sample, spec, 'Y')
         """
+        self.sem = sem
         self.base_sample = base_sample
         self.n_samples = len(next(iter(base_sample.values())))
         self.interventions = intervention_spec
         self.proxies = list(intervention_spec.keys())
-        self.sem = sem
         self.intervened_graph = self.sem.get_intervened_graph(self.proxies)
         self.target = target
+        self.verbose = verbose
         self._set_n_interventions()
         self.training_samples = []
         self._check_input()
