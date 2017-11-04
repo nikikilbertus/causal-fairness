@@ -88,14 +88,21 @@ def plot_correlations(sample, sem=None, sources=None, targets=None):
 
     corr = correlations(sample, sem=sem, sources=sources, targets=targets)
 
-    for label, data in corr.items():
-        plt.figure(figsize=(5, 5))
-        plt.imshow(data)
-        plt.title(label)
-        plt.xticks(range(len(sources)), sources)
-        plt.yticks(range(len(targets)), targets)
-        plt.colorbar()
-        plt.show()
+    n_side = int(np.sqrt(len(corr)))
+    fig, axs = plt.subplots(n_side, n_side + 1,
+                            figsize=(5 * n_side, 5 * (n_side + 1)))
+
+    axs_flat = [ax for dim in axs for ax in dim]
+
+    for i, (label, data) in enumerate(corr.items()):
+        im = axs_flat[i].imshow(data)
+        axs_flat[i].set_title(label)
+        axs_flat[i].set_xticks(range(len(sources)), sources)
+        axs_flat[i].set_yticks(range(len(targets)), targets)
+        fig.colorbar(im, ax=axs_flat[i], use_gridspec=True)
+
+    plt.tight_layout()
+    plt.show()
 
 
 def evaluate_on_new_sample(sem, target, corrected, n_sample=8192, plot=True):
