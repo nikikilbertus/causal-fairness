@@ -238,7 +238,7 @@ class SEM(Graph):
                       if v not in self.roots()]
         else:
             assert not any(x in self.roots() for x in update), \
-               "Cannot update root vertex."
+                "Cannot update root vertex."
 
         print("Updating the vertices {}...".format(update), end=' ')
         for v in update:
